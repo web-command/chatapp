@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Chat</title>
+</head>
+<body>
+    <ul id="messages"></ul>
+    <form id="form" action="" enctype="multipart/form-data">
+        <input id="name" placeholder="Your Name" autocomplete="off">
+        <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
+        <input type="file" id="fileInput" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+        <button id="sendButton">Send</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+
+        // DOM elements
+        var form = document.getElementById('form');
+        var nameInput = document.getElementById('name');
+        var messageInput = document.getElementById('messageInput');
+        var fileInput = document.getElementById('fileInput');
+
+        // Event listener for form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (nameInput.value && messageInput.value) {
+                socket.emit('chat message', { name: nameInput.value, message: messageInput.value });
+                messageInput.value = '';
+            }
+            if (nameInput.value && fileInput.files.length > 0) {
+                var file = fileInput.files[0];
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var data = {
+                        name: nameInput.value,
+                        filename: file.name,
+                        filetype: file.type,
+                        data: event.target.result
+                    };
+                    socket.emit('chat file', data);
+                    fileInput.value = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Event listener for receiving messages
+        socket.on('chat message', function(data) {
+            var item = document.createElement('li');
+            item.textContent = data.name + ': ' + data.message;
+            document.getElementById('messages').appendChild(item);
+        });
+
+        // Event listener for receiving files
+        socket.on('chat file', function(data) {
+            var link = document.createElement('a');
+            link.textContent = data.name + ' sent: ' + data.filename;
+            link.setAttribute('href', data.data);
+            link.setAttribute('download', data.filename);
+            var item = document.createElement('li');
+            item.appendChild(link);
+            document.getElementById('messages').appendChild(item);
+        });
+    </script>
+</body>
+</html>
